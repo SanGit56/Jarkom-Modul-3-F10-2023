@@ -81,6 +81,8 @@ VITE_PUSHER_APP_CLUSTER="${PUSHER_APP_CLUSTER}"' > /var/www/laravel-praktikum-ja
 php artisan migrate:fresh
 php artisan db:seed --class=AiringsTableSeeder
 php artisan key:generate
+php artisan jwt:secret
+php artisan config:clear
 
 echo 'server {
 
@@ -109,8 +111,6 @@ echo 'server {
     access_log /var/log/nginx/implementasi_access.log;
 }' > /etc/nginx/sites-available/default
 
-php artisan jwt:secret
-php artisan config:clear
 chown -R www-data.www-data /var/www/laravel-praktikum-jarkom/storage
 service php8.0-fpm start
 service nginx restart
