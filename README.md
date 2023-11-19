@@ -38,7 +38,7 @@ location / {
 ```
 ### Testing
 - IP client: 192.226.3.69<br>
-<img src="img/12-ip-3.69.png">
+<img src="img/12-ip-3.69.png" style="width: 200px">
 <img src="img/12-hasil-3.69.png">
 - IP client: 192.226.3.17
 <img src="img/12-ip-3.17.png">
