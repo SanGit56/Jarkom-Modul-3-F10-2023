@@ -1,10 +1,444 @@
 # Jarkom-Modul-3-F10-2023
-Laporan resmi praktikum modul 3 dhcp &amp; reverse proxy mata kuliah jaringan komputer
-Kelompok: F10 <br />
-Nama anggota 1: Radhiyan M Hisan <br />
-NRP anggota 1: 5025211166 <br />
-Nama anggota 2: Thoriq Afif Habibi <br />
-NRP anggota 2: 5025211154 <br />
+Laporan resmi praktikum modul 3 dhcp &amp; reverse proxy mata kuliah jaringan komputer <br />
+Kelompok: F10
+Nama | NRP
+--- | ---
+Thoriq Afif Habibi | 5025211154
+Radhiyan Muhammad Hisan | 5025211166
+
+## 0. Register domain riegel.canyon.yyy.com untuk worker Laravel dan granz.channel.yyy.com untuk worker PHP mengarah pada worker yang memiliki IP [prefix IP].x.1
+Mendaftarkan domain dilakukan di node DNS server, dalam modul ini adalah Heiter. Node yang IP-nya memenuhi kondisi untuk worker Laravel dan PHP masing-masing adalah Frieren dan Lawine:
+```R
+#!/bin/bash
+
+zone="zone \"riegel.canyon.f10.com\" {
+    type master;
+    file \"/etc/bind/jarkom/riegel.canyon.f10.com\";
+};
+
+
+zone \"granz.channel.f10.com\" {
+    type master;
+    file \"/etc/bind/jarkom/granz.channel.f10.com\";
+};"
+
+
+echo "$zone" > /etc/bind/named.conf.local
+
+
+mkdir /etc/bind/jarkom
+cp /etc/bind/db.local /etc/bind/jarkom/riegel.canyon.f10.com
+
+
+conf_riegel=';
+; BIND data file for local loopback interface
+;
+$TTL    604800
+@   IN  SOA riegel.canyon.f10.com. root.riegel.canyon.f10.com. (
+            2022100601      ; Serial
+            604800      ; Refresh
+            86400           ; Retry
+            2419200     ; Expire
+            604800 )        ; Negative Cache TTL
+;
+@   IN  NS      riegel.canyon.f10.com.
+@   IN  A       192.226.4.1     ; IP Frieren worker laravel
+@   IN  AAAA        ::1'
+
+
+echo "$conf_riegel" > /etc/bind/jarkom/riegel.canyon.f10.com
+
+
+cp /etc/bind/db.local /etc/bind/jarkom/granz.channel.f10.com
+
+
+conf_granz=';
+; BIND data file for local loopback interface
+;
+$TTL    604800
+@   IN  SOA granz.channel.f10.com. root.granz.channel.f10.com. (
+            2022100601      ; Serial
+            604800      ; Refresh
+            86400           ; Retry
+            2419200     ; Expire
+            604800 )        ; Negative Cache TTL
+;
+@   IN  NS      granz.channel.f10.com.
+@   IN  A       192.226.3.1     ; IP Lawine worker php
+@   IN  AAAA        ::1'
+
+
+echo "$conf_granz" > /etc/bind/jarkom/granz.channel.f10.com
+
+service bind9 restart
+```
+
+## 1. Lakukan konfigurasi sesuai peta
+Mengatur konfigurasi jaringan lewat _script_ yang dituliskan pada file **/etc/network/interfaces** di node masing-masing:
+```R
+# Aura
+echo 'auto eth0
+iface eth0 inet dhcp
+
+auto eth1
+iface eth1 inet static
+	address 192.226.1.0
+	netmask 255.255.255.0
+
+auto eth2
+iface eth2 inet static
+	address 192.226.2.0
+	netmask 255.255.255.0
+
+auto eth3
+iface eth3 inet static
+	address 192.226.3.0
+	netmask 255.255.255.0
+
+auto eth4
+iface eth4 inet static
+	address 192.226.4.0
+	netmask 255.255.255.0
+' > /etc/network/interfaces
+
+# Himmel
+echo 'auto eth0
+iface eth0 inet static
+	address 192.226.1.2
+	netmask 255.255.255.0
+	gateway 192.226.1.0
+' > /etc/network/interfaces
+
+# Heiter
+echo 'auto eth0
+iface eth0 inet dhcp
+hwaddress ether 42:32:8f:22:d8:58' > /etc/network/interfaces
+
+# Denken
+echo 'auto eth0
+iface eth0 inet dhcp
+hwaddress ether ba:63:50:e2:03:de' > /etc/network/interfaces
+
+# Elsen
+echo 'auto eth0
+iface eth0 inet dhcp
+hwaddress ether de:9f:53:b6:76:68' > /etc/network/interfaces
+
+# Revolte
+echo 'auto eth0
+iface eth0 inet dhcp
+hwaddress ea:3d:7b:58:ec:96' > /etc/network/interfaces
+
+# Richter
+echo 'auto eth0
+iface eth0 inet dhcp' > /etc/network/interfaces
+
+# Lawine
+echo 'auto eth0
+iface eth0 inet dhcp
+hwaddress ether 9e:5e:1f:e6:c1:67' > /etc/network/interfaces
+
+# Linie
+echo 'auto eth0
+iface eth0 inet dhcp
+hwaddress ether c2:66:cc:96:7f:8e' > /etc/network/interfaces
+
+# Lugner
+echo 'auto eth0
+iface eth0 inet dhcp
+hwaddress ether 02:7e:1b:31:ee:b7' > /etc/network/interfaces
+
+# Sein
+echo 'auto eth0
+iface eth0 inet dhcp
+Hwaddress ether 02:5d:80:72:92:0d' > /etc/network/interfaces
+
+# Stark
+echo 'auto eth0
+iface eth0 inet dhcp' > /etc/network/interfaces
+
+# Frieren
+echo 'auto eth0
+iface eth0 inet dhcp
+hwaddress ether 7a:a1:96:37:78:73' > /etc/network/interfaces
+
+# Flamme
+echo 'auto eth0
+iface eth0 inet dhcp
+hwaddress ether ce:d5:27:47:88:2c' > /etc/network/interfaces
+
+# Fern
+echo 'auto eth0
+iface eth0 inet dhcp
+hwaddress ether f2:94:c1:5b:15:fb' > /etc/network/interfaces
+```
+
+## 2. Client yang melalui Switch3 mendapatkan range IP dari [prefix IP].3.16 - [prefix IP].3.32 dan [prefix IP].3.64 - [prefix IP].3.80
+Membuat konfigurasi agar perangkat yang tersambung melewati switch 3 mendapatkan alamat IP dengan jangkauan seperti yang tertera pada soal:
+```R
+echo 'INTERFACESv4="eth0"' > /etc/default/isc-dhcp-server
+
+echo 'subnet 192.226.1.0 netmask 255.255.255.0 {
+}
+
+subnet 192.226.2.0 netmask 255.255.255.0 {
+}
+
+subnet 192.226.3.0 netmask 255.255.255.0 {
+    range 192.226.3.16 192.226.3.32;
+    range 192.226.3.64 192.226.3.80;
+    option routers 192.226.3.0;
+    option broadcast-address 192.226.3.255;
+    option domain-name-servers 192.226.1.1;
+    default-lease-time 180;
+    max-lease-time 5760;
+}
+
+# ...
+
+host Heiter {
+    hardware ethernet 42:32:8f:22:d8:58;
+    fixed-address 192.226.1.1;
+}
+
+host Denken {
+    hardware ethernet ba:63:50:e2:03:de;
+    fixed-address 192.226.2.1;
+}
+
+host Elsen {
+    hardware ethernet de:9f:53:b6:76:68;
+    fixed-address 192.226.2.2;
+}
+
+host Lawine {
+    hardware ethernet 9e:5e:1f:e6:c1:67;
+    fixed-address 192.226.3.1;
+}
+
+host Linie {
+    hardware ethernet c2:66:cc:96:7f:8e;
+    fixed-address 192.226.3.2;
+}
+
+host Lugner {
+    hardware ethernet 02:7e:1b:31:ee:b7;
+    fixed-address 192.226.3.3;
+}
+
+host Frieren {
+    hardware ethernet 7a:a1:96:37:78:73;
+    fixed-address 192.226.4.1;
+}
+
+host Flamme {
+    hardware ethernet ce:d5:27:47:88:2c;
+    fixed-address 192.226.4.2;
+}
+
+host Fern {
+    hardware ethernet f2:94:c1:5b:15:fb;
+    fixed-address 192.226.4.3;
+}' > /etc/dhcp/dhcpd.conf
+
+service isc-dhcp-server restart
+```
+
+## 3. Client yang melalui Switch4 mendapatkan range IP dari [prefix IP].4.12 - [prefix IP].4.20 dan [prefix IP].4.160 - [prefix IP].4.168
+Menambahkan konfigurasi untuk switch 4 di file yang sama dengan no 2 yaitu **/etc/dhcp/dhcpd.conf**
+```R
+# ...
+#     max-lease-time 5760;
+# }
+
+subnet 192.226.4.0 netmask 255.255.255.0 {
+    range 192.226.4.12 192.226.4.20;
+    range 192.226.4.160 192.226.4.168;
+    option routers 192.226.4.0;
+    option broadcast-address 192.226.4.255;
+    option domain-name-servers 192.226.1.1;
+    default-lease-time 720;
+    max-lease-time 5760;
+}
+
+# host Heiter {
+#     hardware ethernet 42:32:8f:22:d8:58;
+# ...
+```
+
+## 4. Client mendapatkan DNS dari Heiter dan dapat terhubung dengan internet melalui DNS tersebut
+Menambahkan DNS forwarder pada node DNS server, Heiter:
+```R
+echo 'options {
+    directory "/var/cache/bind";
+
+
+    forwarders {
+        192.168.122.1;
+    };
+
+
+    allow-query{ any; };
+
+
+    auth-nxdomain no;
+    listen-on-v6 { any; };
+};' > /etc/bind/named.conf.options
+```
+
+## 5. Lama waktu DHCP server meminjamkan alamat IP kepada Client yang melalui Switch3 selama 3 menit sedangkan pada client yang melalui Switch4 selama 12 menit. Dengan waktu maksimal dialokasikan untuk peminjaman alamat IP selama 96 menit
+Pengalokasian waktu peminjaman alamat IP kepada Client oleh DHCP server diatur oleh perintah `default-lease-time` dan `max-lease-time` pada blok kode `subnet...` di file **/etc/dhcp/dhcpd.conf**:
+```R
+subnet 192.226.3.0 netmask 255.255.255.0 {
+# ...
+    default-lease-time 180;
+    max-lease-time 5760;
+}
+
+subnet 192.226.4.0 netmask 255.255.255.0 {
+# ...
+    default-lease-time 720;
+    max-lease-time 5760;
+}
+```
+
+## 6. Pada masing-masing worker PHP, lakukan konfigurasi virtual host untuk website berikut dengan menggunakan php 7.3
+Konfigurasi PHP worker Lawine, Linie, Lugner:
+```R
+cp /etc/nginx/sites-available/default /etc/nginx/sites-available/granz
+wget -O '/var/www/granz.channel.f10.com.zip' 'https://drive.usercontent.google.com/download?id=1ViSkRq7SmwZgdK64eRbr5Fm1EGCTPrU1'
+unzip /var/www/granz.channel.f10.com.zip -d /var/www
+rm /var/www/granz.channel.f10.com.zip
+
+echo 'server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+
+
+    root /var/www/modul-3;
+
+
+    index index.html index.htm index.php;
+
+
+    server_name granz.channel.f10.com;
+
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+
+    location ~ \.php$ {
+        include snippets/fastcgi-php.conf;
+
+
+        fastcgi_pass unix:/run/php/php7.3-fpm.sock;
+    }
+}' > /etc/nginx/sites-available/granz
+
+ln -s /etc/nginx/sites-available/granz /etc/nginx/sites-enabled
+unlink /etc/nginx/sites-enabled/default
+
+service nginx restart
+```
+
+Konfigurasi load balancer untuk granz:
+```R
+#!/bin/bash
+
+cp /etc/nginx/sites-available/default /etc/nginx/sites-available/lb-granz
+unlink /etc/nginx/sites-enabled/default
+ln -s /etc/nginx/sites-available/lb-granz /etc/nginx/sites-enabled
+
+echo 'upstream backend  {
+    server 192.226.3.1; #IP Lawine
+    server 192.226.3.2; #IP Linie
+    server 192.226.3.3; #IP Lugner
+}
+
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name _;
+
+    location / {
+        proxy_pass http://backend;
+        proxy_set_header    X-Real-IP $remote_addr;
+        proxy_set_header    X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header    Host $http_host;
+    }
+
+    error_log /var/log/nginx/lb_error.log;
+    access_log /var/log/nginx/lb_access.log;
+}' > /etc/nginx/sites-available/lb-jarkom
+
+service nginx restart
+```
+
+## 7. Setelah mengatur agar Eisen dapat bekerja maksimal sesuai _resource server_, lakukan testing dengan 1000 request dan 100 request/second
+Server yang lebih bagus mendapat beban lebih (round robin dengan urutan weight dari terbesar Lawine, Linie, Lugner) <br >
+Weight:
+- Lawine: 4
+- Linie: 2
+- Lugner: 1
+
+> Kode _testing_: `ab -n 1000 -c 100 http://192.226.2.2/`
+
+## 8. Karena diminta untuk menuliskan grimoire, buatlah analisis hasil testing dengan 200 request dan 10 request/second masing-masing algoritma Load Balancer dengan ketentuan sesuai soal
+Kode testing yang digunakan sama saja. Yang berbeda adalah algoritma _load balancer_ yang digunakan yang diatur di file konfigurasi node.
+
+> Kode _testing_: `ab -n 200 -c 10 http://192.226.2.2/`
+
+## 9. Dengan menggunakan algoritma Round Robin, lakukan testing dengan menggunakan 3 worker, 2 worker, dan 1 worker sebanyak 100 request dengan 10 request/second, kemudian tambahkan grafiknya pada grimoire
+Jumlah worker diatur di blok kode `upstream backend...` pada konfigurasi _load balancer_ granz di file **/etc/nginx/sites-available/lb-jarkom**
+
+> Kode _testing_: `ab -n 100 -c 10 http://192.226.2.2/`
+
+## 10. Tambahkan konfigurasi autentikasi di LB dengan dengan kombinasi username: “netics” dan password: “ajkyyy”, dengan yyy merupakan kode kelompok. Terakhir simpan file “htpasswd” nya di /etc/nginx/rahasisakita/
+```R
+#!/bin/bash
+mkdir /etc/nginx/rahasisakita
+echo 'ajkf10' | htpasswd -ic /etc/nginx/rahasisakita/.htpasswd netics
+
+
+echo 'upstream backend  {
+    server 192.226.3.1 weight=4; #IP Lawine
+    server 192.226.3.2 weight=2; #IP Linie
+    server 192.226.3.3 weight=1; #IP Lugner
+}
+
+
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name _;
+
+
+    location / {
+        proxy_pass http://backend;
+        proxy_set_header    X-Real-IP $remote_addr;
+        proxy_set_header    X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header    Host $http_host;
+
+
+        auth_basic "Administrators Area";
+        auth_basic_user_file /etc/nginx/rahasisakita/.htpasswd;
+    }
+
+
+    location ~ /\.ht {
+        deny all;
+    }
+
+
+    error_log /var/log/nginx/lb_error.log;
+    access_log /var/log/nginx/lb_access.log;
+}' > /etc/nginx/sites-available/lb-granz
+
+
+service nginx restart
+```
 
 ## 11. Proxy passing untuk setiap request yang mengandung /its menuju https://its.ac.id
 Untuk melakukakn proxy passing pada request yang mengandung '/its', perlu penambahan konfigurasi nginx lb-granz yang sudah dibuat dengan directive location '~ /its'. Block 'location ~ /its' akan menanggapi seluruh http request yang mengandung '/its', seperti 'home/its', '/its/index.php', '/home/its/xxx', dll. Selanjutnya, request tersebut harus dipassing ke `https://its.ac.id` dengan menggunakan fitur proxy_pass pada nginx. Block location yang ditambahkan pada konfigurasi adalah sebagai berikut:
@@ -357,3 +791,6 @@ Untuk melihat performa dari algoritma least_conn, dilakukan testing dengan `ab -
 <img src="img/20.png"><br>
 
 Dari hasil testing tersebut, terlihat terdapat kenaikan rps ketika diimplementasikan algoritma least_conn. Oleh karena itu, least_conn terbukti berpengaruh terhadap kenaikan performa worker
+
+## Catatan
+Untuk hasil testing no 7 - 9 tersedia di grimoire. Tidak dicantumkan di README karena ada kendala dalam penyalinan dan pengunduhan file gambar. Diakali dengan tangkap layar tidak cukup berkualitas resolusinya.
