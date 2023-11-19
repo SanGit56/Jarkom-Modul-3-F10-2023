@@ -13,7 +13,7 @@ location ~ /its {
     proxy_pass https://www.its.ac.id;
 }
 ```
-#### Testing
+### Testing
 - lynx 192.226.2.2/home/its<br>
 <img src="img/11-proxy_pass.png"></img>
 
@@ -36,7 +36,7 @@ location / {
     auth_basic_user_file /etc/nginx/rahasisakita/.htpasswd;
 }
 ```
-#### Testing
+### Testing
 - IP client: 192.226.3.69<br>
 <img src="img/12-ip-3.69.png">
 <img src="img/12-hasil-3.69.png">
