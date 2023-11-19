@@ -1,4 +1,4 @@
-mysql -u root < init.sql
+mysql -u root < /root/init.sql
 
 echo '[client-server]
 !includedir /etc/mysql/conf.d/
@@ -7,3 +7,5 @@ echo '[client-server]
 [mysqld]
 skip-networking=0
 skip-bind-address' > /etc/mysql/my.cnf
+
+service mysql restart

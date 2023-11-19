@@ -1,0 +1,1 @@
+mariadb --host=192.226.2.1 --port=3306 --user=kelompokf10 --password
